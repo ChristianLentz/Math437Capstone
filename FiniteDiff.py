@@ -1,14 +1,16 @@
 """ 
 This file contains code to approximate solutions to the wave equation 
-using finite differences. 
+in two dimensions using finite differences. 
 
 Author: Christian Lentz
 """
 
 import numpy as np
+import random as rand
 import scipy.interpolate as interp
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
+from mpl_toolkits.mplot3d import Axes3D 
 
 class FiniteDiffs: 
     
@@ -34,41 +36,59 @@ class FiniteDiffs:
         self.tmax = tbounds[1]
         
         # discretize spatial and temporal variables  
-        xN = 50
+        xN = 75
         self.deltaX = (self.xmax - self.xmin) / xN
         self.xvals = np.linspace(self.xmin, self.xmax, xN) 
-        yN = 50
+        yN = 75
         self.deltaY = (self.ymax - self.ymin) / yN
-        self.yvals = np.linspace(self.ymin, self.ymin, yN) 
+        self.yvals = np.linspace(self.ymin, self.ymax, yN) 
         tN = 50 
         self.deltaT = (self.tmax - self.tmin) / tN
-
+    
         # initial conditions
-        self.ICx = np.exp(-((self.xvals - self.xmax/2)/15)**2)
-        self.ICy = np.exp(-((self.yvals - self.ymax/2)/15)**2)
+        self.IC = np.array(self.get_IC())
         
         # array to hold previous and current solutions
         self.uprev = None             # u(x,y,T - dt)
-        self.ucurrent = self.ICx      # u(x,y,T)
+        self.ucurrent = self.IC       # u(x,y,T)
         
         # counter for time steps
         self.tc = 0
         
-        # figure to plot the function 
+        # figure to plot the surface of the wave
         self.fig = fig
         self.ax = ax
         
-        # plot the initial solution curve 
-        self.ax.plot(self.ICx)
+    def runTest(self): 
         
-        # # animate the solution curves 
+        """
+        Called in the main method of this file. Will animate solutions to 
+        a randomly generated in 
+        """
+        
+        # prepare the grid and plot initial solution
+        X, Y = np.meshgrid(self.xvals, self.yvals) 
+        self.ax.plot_surface(X, Y, self.IC)
+        self.ax.set_xlabel("x axis")
+        self.ax.set_ylabel("y axis")
+        self.ax.set_zlabel("z axis")
+        
+        # # plot successive solutions for each new time step
+        # for tj in range(tN): 
+        #     self.oneStep()
+        #     self.ax.plot_surface(X, Y, self.ucurrent)
+            
+        # FINAL STEP IS TO ANIMATE!
+        
+        # animate the solution curves 
         # animation = ani.FuncAnimation(fig = self.fig, 
         #                                 func = FD.oneStep(),
         #                                 fargs = (img, ),  
         #                                 frames = 10, 
         #                                 interval = 50)
         
-    def get_dt(self):         
+    def get_dt(self):  
+               
         """
         Use the CLT condition to find a value for dt given dx and dy. 
         """
@@ -79,11 +99,48 @@ class FiniteDiffs:
         
         """
         Randomly generate an initial condition. 
-        We use random linear combintions of approximately normal distributions 
-        which are centered on random x and y coordinates. 
+        We use random linear combintions of normal distributions. 
         """
         
-        # this might need to be included in the FrontEnd class? 
+        # generate random x and y paths as initial conditions
+        ICx = self.getRandHillyPath(self.xvals, self.xmax, self.xmin)
+        ICy = self.getRandHillyPath(self.yvals, self.ymax, self.ymin)
+        
+        # combine ICx and ICy into a surface
+        IC = []
+        for xval in ICx:
+            curr_x_arr = []
+            for yval in ICy: 
+                curr_x_arr.append(xval+yval)
+            IC.append(curr_x_arr)
+            
+        return IC
+    
+    def getRandHillyPath(self, vals, maximum, minimum):
+        
+        """ 
+        Generate a random hilly path. We use this to generate an initial 
+        condition for y and x, and then combine these to get a random 
+        surface as our initial wave. 
+        """
+        
+        ic = np.zeros(vals.shape)
+        for hill in range(rand.randrange(5)):
+            # random spread for each hill  
+            sigma = np.random.random() * (maximum/2 - minimum)
+            # random center for each hill 
+            mu = np.random.random() * (maximum - minimum)
+            # add new hill to the initial x condition
+            ic = ic + self.getRandGaussian(vals, sigma, mu)
+            
+        return ic
+    
+    def getRandGaussian(self, vals, sigma, mu):
+        
+        """
+        Generate a Guassian (normal) distribution with random spread and center. 
+        """
+        return np.array((1 / (np.sqrt(2 * np.pi * sigma**2))) * np.exp((-1/2) * ((vals-mu) / sigma)**2))
         
     def oneStep(self): 
         
@@ -111,11 +168,11 @@ class FiniteDiffs:
             else: 
                 tp = 0
                 
-            # left boundary 
+            # left boundary -- UPDATE THIS TO BE PERIODIC
             if j == 0:
                 unew[j] = 0
                 
-            # right boundary 
+            # right boundary -- UPDATE THIS TO BE PERIODIC
             elif j == unew.size-1:
                 # get components of difference quotient 
                 xl = self.ucurrent[j-1]
@@ -133,14 +190,11 @@ class FiniteDiffs:
                 unew[j] = 2*xc - tp 
                 unew[j] += (((self.c**2)*(self.deltaT**2))/(self.deltaX**2))*(xr + xl - 2*xc) 
         
-        # update our solutions 
+        # update solutions and time step
         self.uprev = self.ucurrent
         self.ucurrent = unew
         self.tc+=1
-         
-        # plot the new current solution 
-        self.ax.plot(self.ucurrent, '-')
-        
+
 # ==============================================================
 
 def main():
@@ -149,11 +203,12 @@ def main():
     The main method here is for testing the finite differences code. 
     """ 
     
-    fig,ax = plt.subplots()
-    FD = FiniteDiffs([-4,50], [-4, 50], [0,25], fig, ax)
+    # instantiate finite diff solver 
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    FD = FiniteDiffs([0,75], [0, 75], [0,25], fig, ax)
     
-    for tj in range(25): 
-        FD.oneStep()
+    FD.runTest()
         
     plt.show()
 

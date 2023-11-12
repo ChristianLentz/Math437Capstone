@@ -24,7 +24,6 @@ class FrontEnd:
         self.ySize = 200
         
         # the finite diff solver
-        self.FD = FiniteDiffs((0, 200), (0,200))
         
-        # create the 
+        # create the GUI grid 
         
