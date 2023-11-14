@@ -23,7 +23,11 @@ class FrontEnd:
         self.xSize = 200
         self.ySize = 200
         
+        # create the GUI grid 
+        
+        # randomly generate initial wave
+        
         # the finite diff solver
         
-        # create the GUI grid 
+        # the spectral solver
         
