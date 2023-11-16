@@ -2,6 +2,9 @@
 This file contains code to approximate solutions to the wave equation 
 in two dimensions using finite differences. 
 
+See the main method at the bottom of this file to see either one or 
+two dimensional solutions. 
+
 Author: Christian Lentz
 """
 
@@ -24,50 +27,57 @@ class FiniteDiffs:
         Constructor for the finite differences solver. 
         """
         
-        # constants and variables  
-        self.c = 1.5
+        # ======================= constants and variables 
+         
+        self.c = 6
         if ybounds == None:
             self.is1D = True 
         else: 
             self.is1D = False
         
-        # spatial and temporal bounds
+        # ======================= spatial and temporal bounds
+        
         self.xmin = xbounds[0]
         self.xmax = xbounds[1]
         self.tmin = tbounds[0]
         self.tmax = tbounds[1]
         
-        # discretize spatial and temporal variables  
-        xN = 75
+        # ======================= discretize spatial and temporal variables  
+        
+        xN = 150
         self.deltaX = (self.xmax - self.xmin) / xN
-        self.xvals = np.linspace(self.xmin, self.xmax, xN) 
-        tN = 2 * (self.tmax - self.tmin) 
+        self.xvals = np.linspace(self.xmin, self.xmax, xN, endpoint = False) 
+        tN = 10 * (self.tmax - self.tmin) 
         self.deltaT = (self.tmax - self.tmin) / tN
         
-        # add second spatial dimension if necessary
+        # ======================= add second spatial dimension if necessary
+        
         if not self.is1D:
             self.ymin = ybounds[0]
             self.ymax = ybounds[1]
-            yN = 75
+            yN = 150
             self.deltaY = (self.ymax - self.ymin) / yN
-            self.yvals = np.linspace(self.ymin, self.ymax, yN) 
+            self.yvals = np.linspace(self.ymin, self.ymax, yN, endpoint = False) 
         
-        # initial conditions and previous solutions
-        # xprev and yprev together give u(x,y,t - dt)
+        # ======================= initial conditions 
+        
         if self.is1D: 
-            self.ICx = self.get_IC(self.is1D)
+            IC = self.get_IC(self.is1D)
         else:
-            self.ICx, self.ICy = self.get_IC(self.is1D)
-            self.yprev = None
-            self.ycurr = self.ICy
-            self.IC = self.projectToSurface(self.ICx, self.ICy)
-        self.xprev = None
-        self.xcurr = self.ICx
+            ICx, ICy = self.get_IC(self.is1D)
+            IC = self.projectToSurface(ICx,ICy)
+        
+        # =======================
+        
+        # variables to track current and previous solutions curves 
+        # we need both of these to compute the difference quotients 
+        self.uprev = IC
+        self.ucurr = IC
        
         # counter for time steps
         self.tc = 0
         
-        # figure to plot the surface of the wave
+        # figure to plot the wave
         self.fig = fig
         self.ax = ax
         
@@ -75,26 +85,32 @@ class FiniteDiffs:
         
         """
         Called in the main method of this file. Will animate solutions to 
-        a randomly generated in 
-        """
+        a randomly generated initial condition. 
+        """ 
         
         # plot 1D solutions 
         if self.is1D:
-            self.plotSoln1D(self.ICx)
-            for tj in range(self.tmax - 1):
-                self.oneStep1D()
-                self.plotSoln1D(self.xcurr)
+            wave1D = self.plotSoln1D(self.ucurr)
+            animation = ani.FuncAnimation(fig = self.fig, 
+                                        func = self.oneStep1DVec,
+                                        fargs = (wave1D, ),  
+                                        frames = 100, 
+                                        interval = 5)
         # plot 2D solutions 
         else:
-            self.plotSoln2D(self.IC)
-            for tj in range(self.tmax-1):
-                self.oneStep2D()
-                self.plotSoln2D(self.projectToSurface(self.xcurr, self.ycurr))
+            wave2D = self.plotSoln2D(self.ucurr)
+            animation = ani.FuncAnimation(fig = self.fig, 
+                                        func = self.oneStep2D,
+                                        fargs = (wave2D, ),  
+                                        frames = 100, 
+                                        interval = 5)
+        
+        plt.show()
                 
     def get_dt(self):  
                
         """
-        Use the CLT condition to find a value for dt given dx and dy. 
+        Use the CLT condition to find a value for dt given dx (and dy). 
         """
         
         # this may not be included, we'll see
@@ -106,7 +122,7 @@ class FiniteDiffs:
         We use random linear combintions of normal distributions. 
         """
         
-        # generate random x and/or y paths as initial conditions
+        # generate random x (and y) path(s) as initial conditions
         if is1D: 
             return self.getRandHillyPath(self.xvals, self.xmax, self.xmin)
         else: 
@@ -156,49 +172,88 @@ class FiniteDiffs:
             
         return np.array(surf)
         
-    def oneStep1D(self): 
+    def oneStep1DLoops(self): 
         
         """ 
         Run one step of the PDE solver by computing a solution for a single time.
         Each piece of the difference quotient that we need is written as follows: 
         
-            - xl = x - dx = the previous x coordinate
-            - xc = x = the current x coordinate
-            - xr = x + dx = the next x coordinate 
-            
-            - tp = t - dt = the previous time step
-        """
+            - ul = u(x - dx, t) 
+            - xc = u(x, t) 
+            - ur = u(x + dx, t) 
+            - tp = u(x, t - dt) 
+        
+        This version loops over all of the spatial variables at each time step, 
+        and is a slow brute-force approach. 
+        """ 
 
-        unew = 0 * self.xcurr
+        unew = 0 * self.ucurr
         
         for j in range(unew.size):
             
-            # get tp if current time step is not the initial 
-            if self.tc != 0: 
-                tp = self.xprev[j]
-            else: 
-                tp = 0
+            # get the previous time step: u(x, T - dt)
+            tp = self.uprev[j]
                 
             # left boundary -- periodic boundary condition
             if j == 0:
-                unew[j] = self.xcurr[self.xcurr.size-1]
+                ul = self.ucurr[-1]
+                uc = self.ucurr[j]
+                ur = self.ucurr[j+1]
                 
             # right boundary -- periodic boundary condition
             elif j == unew.size-1:
-                unew[j] = self.xcurr[0]
+                ul = self.ucurr[j-1]
+                uc = self.ucurr[j]
+                ur = self.ucurr[0]
             else: 
                 # get components of difference quotient 
-                xl = self.xcurr[j-1]
-                xc = self.xcurr[j]
-                xr = self.xcurr[j+1]
-                # compute difference quotient
-                unew[j] = 2*xc - tp 
-                unew[j] += (((self.c**2)*(self.deltaT**2))/(self.deltaX**2))*(xr + xl - 2*xc) 
+                ul = self.ucurr[j-1]
+                uc = self.ucurr[j]
+                ur = self.ucurr[j+1]
+                
+            # compute difference quotient
+            unew[j] = 2*uc - tp 
+            unew[j] += (((self.c**2)*(self.deltaT**2))/(self.deltaX**2))*(ur + ul - 2*uc) 
         
         # update solutions and time step
-        self.xprev = self.xcurr
-        self.xcurr = unew
+        self.uprev = self.ucurr
+        self.ucurr = unew
         self.tc+=1
+        
+    def oneStep1DVec(self, frame, wave): 
+        """
+        Run one step of the PDE solver by computing a solution for a single time.
+        Each piece of the difference quotient that we need is written as follows: 
+        
+            - ul = u(x - dx, t) for all x in self.xvals
+            - self.ucurr
+            - ur = u(x + dx, y) for all x in self.xvals 
+            - self.uprev
+        
+        This version takes a vectorized approach, and only loops over each time step.
+        At each time step, we shift the array ucurr left and right by one index and 
+        feed these new vectors into the difference quotient.  
+        
+        This saves a lot on time and space! 
+        """
+        
+        # get the xl vector 
+        ul = self.ucurr * 0 
+        ul[0:-1] = self.ucurr[1:]
+        ul[-1] = self.ucurr[0]
+        # get the xr vector 
+        ur = self.ucurr * 0
+        ur[0] = self.ucurr[-1]
+        ur[1:] = self.ucurr[0:-1]
+        # compute difference quotient
+        unew = 2*self.ucurr - self.uprev
+        unew += (((self.c**2)*(self.deltaT**2))/(self.deltaX**2))*(ur + ul - 2*self.ucurr)
+        # update variables and animate solns
+        plt.cla()
+        self.plotSoln1D(unew)
+        self.tc+=1
+        self.uprev = self.ucurr
+        self.ucurr = unew
         
     def plotSoln1D(self, vals): 
         
@@ -210,65 +265,51 @@ class FiniteDiffs:
         self.ax.set_xlabel("x axis")
         self.ax.set_ylabel("y axis")
         
-    def oneStep2D(self): 
+    def oneStep2D(self, frame, wave): 
+        
+        # MAY BE SOMETHING WRONG HERE? PLOTS LOOK WEIRD
         
         """ 
         Run one step of the PDE solver by computing a solution for a single time.
         Each piece of the difference quotient that we need is written as follows: 
         
-            - xl = x - dx = the previous x coordinate
-            - xc = x = the current x coordinate
-            - xr = x + dx = the next x coordinate 
-            
-            - yl = y - dy = the previous y coordinate 
-            - yc = y = the current y coordinate 
-            - yr = y + dy = the next y coordinate
-            
-            - tpx = t - dt = the previous time step for x
-            - tpy = t - dt = the previous time step for y
-        """
-
-        xnew = 0 * self.xcurr
-        ynew = 0 * self.ycurr
-         
-        for j in range(self.xcurr.size):
-            
-            # get tp if current time step is not the initial 
-            if self.tc != 0: 
-                tpx = self.xprev[j]
-                tpy = self.xprev[j]
-            else: 
-                tpx = 0
-                tpy = 0
-                
-            # left boundary -- periodic boundary condition
-            if j == 0:
-                xnew[j] = self.xcurr[self.xcurr.size-1]
-                ynew[j] = self.ycurr[self.ycurr.size-1]
-                
-            # right boundary -- periodic boundary condition 
-            elif j == xnew.size-1:
-                xnew[j] = self.xcurr[0]
-                ynew[j] = self.ycurr[0]
-            
-            else: 
-                # get components of difference quotient 
-                xl = self.xcurr[j-1]
-                xc = self.xcurr[j]
-                xr = self.xcurr[j+1]
-                yl = self.ycurr[j-1]
-                yc = self.ycurr[j]
-                yr = self.xcurr[j+1]
-                # compute difference quotient
-                xnew[j] = 2*xc - tpx + (((self.c**2)*(self.deltaT**2))/(self.deltaX**2))*(xr + xl - 2*xc) 
-                ynew[j] = 2*yc - tpy + (((self.c**2)*(self.deltaT**2))/(self.deltaY**2))*(yr + yl - 2*yc)
+            - un = u(x, y + dy, t)
+            - us = u(x, y - dy, t)
+            - ue = u(x - dx, y, t)
+            - uw = u(x + dx, y, t)
+            - tp = u(x, y, t - dt)
         
-        # update solutions and time step
-        self.xprev = self.xcurr
-        self.yprev = self.ycurr
-        self.xcurr = xnew
-        self.ycurr = ynew
+        This takes a vectorized approach similar to oneStep1DVec. At each time step, 
+        we get a 2D array for x - dx, x + dx, y - dy, and y + dy by shifting the 2D 
+        array self.ucurr either north, south, east or west. 
+        """
+        
+        # get un
+        un = self.ucurr * 0
+        un[0:-1,:] = self.ucurr[1:,:]
+        un[-1,:] = self.ucurr[0,:]
+        # get us 
+        us = self.ucurr * 0
+        us[1:,:] = self.ucurr[0:-1,:]
+        us[0,:] = self.ucurr[-1,:]
+        # get ue 
+        ue = self.ucurr * 0
+        ue[:,0:-1] = self.ucurr[:,1:]
+        ue[:,-1] = self.ucurr[:,0]
+        # get uw 
+        uw = self.ucurr * 0
+        uw[:,0] = self.ucurr[:,-1]
+        uw[:,1:] = self.ucurr[0,0:-1]
+        # compute difference quotient
+        unew = 2*self.ucurr - self.uprev 
+        unew += (((self.c**2)*(self.deltaT**2))/(self.deltaX**2))*(ue + uw - 2*self.ucurr) 
+        unew += (((self.c**2)*(self.deltaT**2))/(self.deltaY**2))*(un + us - 2*self.ucurr)
+        # update variables and animate plot
+        plt.cla()
+        self.plotSoln2D(unew)
         self.tc+=1
+        self.uprev = self.ucurr
+        self.ucurr = unew
         
     def plotSoln2D(self, vals): 
         
@@ -290,14 +331,16 @@ def main():
     The main method here is for testing the finite differences code. 
     """ 
     
-    # instantiate finite diff solver 
+    # # run this for 1D!
+    # fig, ax = plt.subplots()
+    # FD = FiniteDiffs([-50,50], [0,10], fig, ax)
+    
+    # run this for 2D!
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    FD = FiniteDiffs([0,75], [0,100], fig, ax, ybounds = [0, 75])
-    
-    # ybounds = [0, 75]
+    FD = FiniteDiffs([0,100], [0,10], fig, ax, ybounds = [0,100])
+
     FD.runTest()
-    plt.show()
 
 if __name__ == '__main__':
     main()
