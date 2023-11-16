@@ -9,6 +9,7 @@ Author: Christian Lentz
 """
 
 import numpy as np
+import math as math
 import random as rand
 import scipy.interpolate as interp
 import matplotlib.pyplot as plt
@@ -29,7 +30,7 @@ class FiniteDiffs:
         
         # ======================= constants and variables 
          
-        self.c = 6
+        self.c = 5
         if ybounds == None:
             self.is1D = True 
         else: 
@@ -44,10 +45,10 @@ class FiniteDiffs:
         
         # ======================= discretize spatial and temporal variables  
         
-        xN = 150
+        xN = 2 * (self.xmax - self.xmin)
         self.deltaX = (self.xmax - self.xmin) / xN
         self.xvals = np.linspace(self.xmin, self.xmax, xN, endpoint = False) 
-        tN = 10 * (self.tmax - self.tmin) 
+        tN = 50 * (self.tmax - self.tmin) 
         self.deltaT = (self.tmax - self.tmin) / tN
         
         # ======================= add second spatial dimension if necessary
@@ -55,7 +56,7 @@ class FiniteDiffs:
         if not self.is1D:
             self.ymin = ybounds[0]
             self.ymax = ybounds[1]
-            yN = 150
+            yN = 2 * (self.ymax - self.xmin)
             self.deltaY = (self.ymax - self.ymin) / yN
             self.yvals = np.linspace(self.ymin, self.ymax, yN, endpoint = False) 
         
@@ -95,7 +96,7 @@ class FiniteDiffs:
                                         func = self.oneStep1DVec,
                                         fargs = (wave1D, ),  
                                         frames = 100, 
-                                        interval = 5)
+                                        interval = 1)
         # plot 2D solutions 
         else:
             wave2D = self.plotSoln2D(self.ucurr)
@@ -103,7 +104,7 @@ class FiniteDiffs:
                                         func = self.oneStep2D,
                                         fargs = (wave2D, ),  
                                         frames = 100, 
-                                        interval = 5)
+                                        interval = 1)
         
         plt.show()
                 
@@ -112,8 +113,6 @@ class FiniteDiffs:
         """
         Use the CLT condition to find a value for dt given dx (and dy). 
         """
-        
-        # this may not be included, we'll see
     
     def get_IC(self, is1D): 
         
@@ -139,22 +138,47 @@ class FiniteDiffs:
         """
         
         ic = np.zeros(vals.shape)
-        for hill in range(rand.randrange(10)):
-            # random spread for each hill  
-            sigma = (1 - np.random.random()) * (maximum/2 - minimum)
-            # random center for each hill 
-            mu = (1 - np.random.random()) * (maximum - minimum)
-            # add new hill to the initial x condition
-            ic = ic + self.getRandGaussian(vals, sigma, mu)
+        for hill in range(rand.randint(2,7)):
+            if hill % 2 == 0: 
+                ic = ic + self.getRandSinWave(vals)
+            else: 
+                ic = ic + self.getRandCosWave(vals)
             
         return ic
     
-    def getRandGaussian(self, vals, sigma, mu):
+    def getRandSinWave(self, vals):
         
         """
-        Generate a Guassian (normal) distribution with random spread and center. 
+        Generate a random sine wave whose period alings with the boundaries.  
         """
-        return np.array((1 / (np.sqrt(2 * np.pi * sigma**2))) * np.exp((-1/2) * ((vals-mu) / sigma)**2))
+        
+        a = self.getRandScalar()
+        w = self.xmax - self.xmin
+        func = np.zeros(vals.shape)
+        for i in range(len(vals)): 
+            func[i] = a * math.sin((2*np.pi/w)*vals[i]*rand.random())
+        return func
+    
+    def getRandCosWave(self, vals): 
+        
+        """
+        Get a random cosine wave whose period aligns with the boundaries. 
+        """
+        
+        a = self.getRandScalar()
+        w = self.xmax - self.xmin
+        func = np.zeros(vals.shape)
+        for i in range(len(vals)): 
+            func[i] = a * math.cos((2*np.pi/w)*vals[i]*rand.random())
+        return func
+    
+    def getRandScalar(self):
+        
+        """
+        Get a random real number to scale the height of the random periodic function.  
+        """
+           
+        return rand.random()*rand.randint(-5, 5)
     
     def projectToSurface(self, xvals, yvals): 
         
@@ -252,8 +276,8 @@ class FiniteDiffs:
         plt.cla()
         self.plotSoln1D(unew)
         self.tc+=1
-        self.uprev = self.ucurr
-        self.ucurr = unew
+        self.uprev = self.ucurr + 0
+        self.ucurr = unew + 0
         
     def plotSoln1D(self, vals): 
         
@@ -331,14 +355,14 @@ def main():
     The main method here is for testing the finite differences code. 
     """ 
     
-    # # run this for 1D!
-    # fig, ax = plt.subplots()
-    # FD = FiniteDiffs([-50,50], [0,10], fig, ax)
+    # run this for 1D!
+    fig, ax = plt.subplots()
+    FD = FiniteDiffs([-50,50], [0,10], fig, ax)
     
-    # run this for 2D!
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    FD = FiniteDiffs([0,100], [0,10], fig, ax, ybounds = [0,100])
+    # # run this for 2D!
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds = [-50,50])
 
     FD.runTest()
 
