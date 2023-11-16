@@ -30,7 +30,7 @@ class FiniteDiffs:
         
         # ======================= constants and variables 
          
-        self.c = 5
+        self.c = 10
         if ybounds == None:
             self.is1D = True 
         else: 
@@ -48,7 +48,7 @@ class FiniteDiffs:
         xN = 2 * (self.xmax - self.xmin)
         self.deltaX = (self.xmax - self.xmin) / xN
         self.xvals = np.linspace(self.xmin, self.xmax, xN, endpoint = False) 
-        tN = 50 * (self.tmax - self.tmin) 
+        tN = 500 * (self.tmax - self.tmin) 
         self.deltaT = (self.tmax - self.tmin) / tN
         
         # ======================= add second spatial dimension if necessary
@@ -91,12 +91,13 @@ class FiniteDiffs:
         
         # plot 1D solutions 
         if self.is1D:
+            self.plotSoln1D(self.ucurr)
             wave1D = self.plotSoln1D(self.ucurr)
             animation = ani.FuncAnimation(fig = self.fig, 
                                         func = self.oneStep1DVec,
                                         fargs = (wave1D, ),  
                                         frames = 100, 
-                                        interval = 1)
+                                        interval = 0.5)
         # plot 2D solutions 
         else:
             wave2D = self.plotSoln2D(self.ucurr)
@@ -104,7 +105,7 @@ class FiniteDiffs:
                                         func = self.oneStep2D,
                                         fargs = (wave2D, ),  
                                         frames = 100, 
-                                        interval = 1)
+                                        interval = 0.5)
         
         plt.show()
                 
@@ -138,39 +139,31 @@ class FiniteDiffs:
         """
         
         ic = np.zeros(vals.shape)
-        for hill in range(rand.randint(2,7)):
+        for hill in range(rand.randint(5,10)):
             if hill % 2 == 0: 
-                ic = ic + self.getRandSinWave(vals)
+                ic = ic + self.getRandSinWave(vals, maximum - minimum)
             else: 
-                ic = ic + self.getRandCosWave(vals)
+                ic = ic + self.getRandCosWave(vals, maximum - minimum)
             
         return ic
     
-    def getRandSinWave(self, vals):
+    def getRandSinWave(self, vals, w):
         
         """
         Generate a random sine wave whose period alings with the boundaries.  
         """
         
         a = self.getRandScalar()
-        w = self.xmax - self.xmin
-        func = np.zeros(vals.shape)
-        for i in range(len(vals)): 
-            func[i] = a * math.sin((2*np.pi/w)*vals[i]*rand.random())
-        return func
+        return a*np.sin((2*np.pi/w)*vals)
     
-    def getRandCosWave(self, vals): 
+    def getRandCosWave(self, vals, w): 
         
         """
         Get a random cosine wave whose period aligns with the boundaries. 
         """
         
-        a = self.getRandScalar()
-        w = self.xmax - self.xmin
-        func = np.zeros(vals.shape)
-        for i in range(len(vals)): 
-            func[i] = a * math.cos((2*np.pi/w)*vals[i]*rand.random())
-        return func
+        b = self.getRandScalar()
+        return b*np.cos((2*np.pi/w)*vals)
     
     def getRandScalar(self):
         
@@ -291,8 +284,6 @@ class FiniteDiffs:
         
     def oneStep2D(self, frame, wave): 
         
-        # MAY BE SOMETHING WRONG HERE? PLOTS LOOK WEIRD
-        
         """ 
         Run one step of the PDE solver by computing a solution for a single time.
         Each piece of the difference quotient that we need is written as follows: 
@@ -355,14 +346,14 @@ def main():
     The main method here is for testing the finite differences code. 
     """ 
     
-    # run this for 1D!
-    fig, ax = plt.subplots()
-    FD = FiniteDiffs([-50,50], [0,10], fig, ax)
+    # # run this for 1D!
+    # fig, ax = plt.subplots()
+    # FD = FiniteDiffs([-50,50], [0,10], fig, ax)
     
-    # # run this for 2D!
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds = [-50,50])
+    # run this for 2D!
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds = [-50,50])
 
     FD.runTest()
 
