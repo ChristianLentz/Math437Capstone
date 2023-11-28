@@ -8,6 +8,7 @@ two dimensional solutions.
 Author: Christian Lentz
 """
 
+import argparse
 import numpy as np
 import math as math
 import random as rand
@@ -30,7 +31,7 @@ class FiniteDiffs:
         
         # ======================= constants and variables 
          
-        self.c = 10
+        self.c = 20
         if ybounds == None:
             self.is1D = True 
         else: 
@@ -48,7 +49,7 @@ class FiniteDiffs:
         xN = 2 * (self.xmax - self.xmin)
         self.deltaX = (self.xmax - self.xmin) / xN
         self.xvals = np.linspace(self.xmin, self.xmax, xN, endpoint = False) 
-        tN = 500 * (self.tmax - self.tmin) 
+        tN = 1000 * (self.tmax - self.tmin) 
         self.deltaT = (self.tmax - self.tmin) / tN
         
         # ======================= add second spatial dimension if necessary
@@ -96,16 +97,16 @@ class FiniteDiffs:
             animation = ani.FuncAnimation(fig = self.fig, 
                                         func = self.oneStep1DVec,
                                         fargs = (wave1D, ),  
-                                        frames = 100, 
-                                        interval = 0.5)
+                                        frames = 200, 
+                                        interval = 1)
         # plot 2D solutions 
         else:
             wave2D = self.plotSoln2D(self.ucurr)
             animation = ani.FuncAnimation(fig = self.fig, 
                                         func = self.oneStep2D,
                                         fargs = (wave2D, ),  
-                                        frames = 100, 
-                                        interval = 0.5)
+                                        frames = 200, 
+                                        interval = 1)
         
         plt.show()
                 
@@ -139,7 +140,7 @@ class FiniteDiffs:
         """
         
         ic = np.zeros(vals.shape)
-        for hill in range(rand.randint(5,10)):
+        for hill in range(rand.randint(8,10)):
             if hill % 2 == 0: 
                 ic = ic + self.getRandSinWave(vals, maximum - minimum)
             else: 
@@ -202,6 +203,8 @@ class FiniteDiffs:
         
         This version loops over all of the spatial variables at each time step, 
         and is a slow brute-force approach. 
+        
+        This is deprecated, but is useful for comparison. 
         """ 
 
         unew = 0 * self.ucurr
@@ -238,6 +241,7 @@ class FiniteDiffs:
         self.tc+=1
         
     def oneStep1DVec(self, frame, wave): 
+        
         """
         Run one step of the PDE solver by computing a solution for a single time.
         Each piece of the difference quotient that we need is written as follows: 
@@ -279,6 +283,7 @@ class FiniteDiffs:
         """
         
         self.ax.plot(self.xvals, vals, '-')
+        self.ax.set_ylim((10, 10))
         self.ax.set_xlabel("x axis")
         self.ax.set_ylabel("y axis")
         
@@ -298,27 +303,35 @@ class FiniteDiffs:
         we get a 2D array for x - dx, x + dx, y - dy, and y + dy by shifting the 2D 
         array self.ucurr either north, south, east or west. 
         """
-        
-        # get un
+
+        # get un - BROKEN RN ?
         un = self.ucurr * 0
         un[0:-1,:] = self.ucurr[1:,:]
         un[-1,:] = self.ucurr[0,:]
-        # get us 
+        
+        # get us - BROKEN RN ?
         us = self.ucurr * 0
         us[1:,:] = self.ucurr[0:-1,:]
         us[0,:] = self.ucurr[-1,:]
+        
+        
         # get ue 
         ue = self.ucurr * 0
         ue[:,0:-1] = self.ucurr[:,1:]
         ue[:,-1] = self.ucurr[:,0]
-        # get uw 
+        # get uw
         uw = self.ucurr * 0
         uw[:,0] = self.ucurr[:,-1]
         uw[:,1:] = self.ucurr[0,0:-1]
+        
         # compute difference quotient
         unew = 2*self.ucurr - self.uprev 
-        unew += (((self.c**2)*(self.deltaT**2))/(self.deltaX**2))*(ue + uw - 2*self.ucurr) 
-        unew += (((self.c**2)*(self.deltaT**2))/(self.deltaY**2))*(un + us - 2*self.ucurr)
+        unew += ((self.c**2)*(self.deltaT**2))/(self.deltaX**2)*(uw + ue - 2*self.ucurr) 
+        
+        # this does not work when you comment out the line above, why?
+        unew += ((self.c**2)*(self.deltaT**2)/(self.deltaX**2))*(un + us - 2*self.ucurr)
+        
+        
         # update variables and animate plot
         plt.cla()
         self.plotSoln2D(unew)
@@ -334,6 +347,7 @@ class FiniteDiffs:
         
         X, Y = np.meshgrid(self.xvals, self.yvals) 
         self.ax.plot_surface(X, Y, vals)
+        self.ax.set_zlim(-10,10)
         self.ax.set_xlabel("x axis")
         self.ax.set_ylabel("y axis")
         self.ax.set_zlabel("z axis")
@@ -346,16 +360,23 @@ def main():
     The main method here is for testing the finite differences code. 
     """ 
     
-    # # run this for 1D!
-    # fig, ax = plt.subplots()
-    # FD = FiniteDiffs([-50,50], [0,10], fig, ax)
+    # collect command line input
+    parser = argparse.ArgumentParser(description="Runs FiniteDiff.py.")
+    parser.add_argument('--onedim', action='store_true', required=False)
+    args = parser.parse_args()
     
-    # run this for 2D!
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds = [-50,50])
-
-    FD.runTest()
+    # set up and run 1D version if specified
+    if args.onedim: 
+        fig, ax = plt.subplots()
+        FD = FiniteDiffs([-50,50], [0,10], fig, ax)
+        FD.runTest()
+    
+    # set up and run 2D version as defualt
+    else: 
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds = [-50,50])
+        FD.runTest()
 
 if __name__ == '__main__':
     main()
