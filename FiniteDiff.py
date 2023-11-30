@@ -15,6 +15,7 @@ import random as rand
 import scipy.interpolate as interp
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
+from matplotlib.animation import PillowWriter
 from mpl_toolkits.mplot3d import Axes3D 
 
 class FiniteDiffs: 
@@ -90,6 +91,8 @@ class FiniteDiffs:
         a randomly generated initial condition. 
         """ 
         
+        # pillow = PillowWriter(fps=30)
+        
         # plot 1D solutions 
         if self.is1D:
             self.plotSoln1D(self.ucurr)
@@ -98,7 +101,8 @@ class FiniteDiffs:
                                         func = self.oneStep1DVec,
                                         fargs = (wave1D, ),  
                                         frames = 200, 
-                                        interval = 1)
+                                        interval = 5) 
+            animation.save('1DWave.gif', writer=pillow)
         # plot 2D solutions 
         else:
             wave2D = self.plotSoln2D(self.ucurr)
@@ -106,7 +110,8 @@ class FiniteDiffs:
                                         func = self.oneStep2D,
                                         fargs = (wave2D, ),  
                                         frames = 200, 
-                                        interval = 1)
+                                        interval = 5)
+            # animation.save('2DWave.gif', writer=pillow)
         
         plt.show()
                 
@@ -283,7 +288,7 @@ class FiniteDiffs:
         """
         
         self.ax.plot(self.xvals, vals, '-')
-        self.ax.set_ylim((10, 10))
+        self.ax.set_ylim((-10, 10))
         self.ax.set_xlabel("x axis")
         self.ax.set_ylabel("y axis")
         
@@ -314,7 +319,6 @@ class FiniteDiffs:
         us[1:,:] = self.ucurr[0:-1,:]
         us[0,:] = self.ucurr[-1,:]
         
-        
         # get ue 
         ue = self.ucurr * 0
         ue[:,0:-1] = self.ucurr[:,1:]
@@ -329,7 +333,7 @@ class FiniteDiffs:
         unew += ((self.c**2)*(self.deltaT**2))/(self.deltaX**2)*(uw + ue - 2*self.ucurr) 
         
         # this does not work when you comment out the line above, why?
-        unew += ((self.c**2)*(self.deltaT**2)/(self.deltaX**2))*(un + us - 2*self.ucurr)
+        unew += ((self.c**2)*(self.deltaT**2)/(self.deltaY**2))*(un + us - 2*self.ucurr)
         
         
         # update variables and animate plot
