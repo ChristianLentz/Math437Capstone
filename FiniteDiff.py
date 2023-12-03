@@ -2,9 +2,6 @@
 This file contains code to approximate solutions to the wave equation 
 in two dimensions using finite differences. 
 
-See the main method at the bottom of this file to see either one or 
-two dimensional solutions. 
-
 Author: Christian Lentz
 """
 
