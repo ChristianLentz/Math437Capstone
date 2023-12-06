@@ -27,7 +27,7 @@ class FiniteDiffs:
     A finite differences PDE solver with an animated frontend. 
     """
     
-    def __init__(self, xbounds, tbounds, fig, ax, ybounds = None):
+    def __init__(self, xbounds, tbounds, fig, ax, ybounds=None, stitch=None):
         
         """ 
         Constructor for the finite differences solver. 
@@ -35,11 +35,20 @@ class FiniteDiffs:
         
         # ======================= constants and variables 
          
+        # speed
         self.c = 30
+        
+        # determines if run in 1D mode
         if ybounds == None:
             self.is1D = True 
         else: 
             self.is1D = False
+        
+        # determines which 2D mode to run 
+        if stitch: 
+            self.stitch = True
+        else: 
+            self.stitch = False
         
         # ======================= spatial and temporal bounds
         
@@ -72,13 +81,21 @@ class FiniteDiffs:
         if self.is1D: 
             IC = self.get_IC(self.is1D)
         else:
-            ICx, ICy = self.get_IC(self.is1D)
-            IC = self.projectToSurface(ICx,ICy)
+            # in the 2D case, need to determine which mode we use!
+            if self.stitch:
+                # this is a tuple of two paths we can stitch together
+                # in stitch mode we stitch two 1D solutions together at each step!  
+                IC = self.get_IC(self.is1D)
+            else: 
+                # this is a surface projected from two paths
+                ICx, ICy = self.get_IC(self.is1D)
+                IC = self.projectToSurface(ICx, ICy)
         
         # =======================
         
         # variables to track current and previous solutions curves 
-        # we need both of these to compute the difference quotients 
+        # we need both of these to compute the difference quotients
+        # we initialize uprev to be the same as ucurr so our initial step is smooth 
         self.uprev = IC
         self.ucurr = IC
        
@@ -107,16 +124,31 @@ class FiniteDiffs:
                                         fargs = (wave1D, ),  
                                         frames = 1000, 
                                         interval = 5) 
+            
+            # uncomment this to save a gif to your local! 
             # animation.save('1DWave.gif', writer=pillow)
+            
         # plot 2D solutions 
         else:
-            wave2D = self.plotSoln2D(self.ucurr)
-            animation = ani.FuncAnimation(fig = self.fig, 
-                                        func = self.oneStep2DShifting,
-                                        fargs = (wave2D, ),  
-                                        frames = 200, 
-                                        interval = 5)
-            # animation.save('2DWave.gif', writer=pillow)
+            
+            if self.stitch:
+                
+                print("all that worked!")
+                print(self.uprev[0])
+                print(self.uprev[1])
+                # uncomment this to save a gif to your local! 
+                # animation.save('2DWaveVec.gif', writer=pillow)
+                
+            else: 
+                wave2D = self.plotSoln2D(self.ucurr)
+                animation = ani.FuncAnimation(fig = self.fig, 
+                                            func = self.oneStep2DShifting,
+                                            fargs = (wave2D, ),  
+                                            frames = 200, 
+                                            interval = 5)
+                
+                # uncomment this to save a gif to your local! 
+                # animation.save('2DWaveVec.gif', writer=pillow)
         
         plt.show()
                 
@@ -125,6 +157,8 @@ class FiniteDiffs:
         """
         Use the CLT condition to find a value for dt given dx (and dy). 
         """
+        
+        # never implemented :(
     
     def get_IC(self, is1D): 
         
@@ -353,34 +387,33 @@ class FiniteDiffs:
         self.uprev = self.ucurr
         self.ucurr = unew
         
-    def oneStep2DBoundarySeparate(self, frame, wave):
+    def oneStep2DStitch(self, frame, wave):
         
         """
-        Run one step of the PDE solver by applying the PDE to every point on 
-        the interior of the computational domain and then handling the 
-        boundaries separte. Once again, we will use a vectorized approach as 
-        oppsed to looping. 
+        Each step of the PDE solver proceeds by applying oneStep1D vec to two
+        paths and then stitching them together using projectToSurface. This 
+        is the solution that we plot at each step. 
+        
+        There is no new math or logic here, just cleverly resuing work that 
+        we already did! 
+        
+        Note that each time we run this, both self.ucurr and self.uprev are 
+        tuples of paths which contain all of the infomration needed to apply 
+        the PDE! 
         """
         
-        # here we handle only the interior of the computational grid 
-        interior = self.ucurr*0
-        # ue_int = 
-        # uw_int = 
-        # us_int = 
-        # uw_int = 
+        # apply oneStep to the x path 
         
-        # interior[1:self.xmax-2, 1:self.ymax-2] = 
-        #     self.XC * 
-        #     self.YX * 
-            
+        # apply oneStep to the y path 
         
-        # here we handle the boundaries 
-        # u[0, 1:dimx-1, 1:dimy-1] = alpha[1:dimx-1, 1:dimy-1] * ( \
-		# u[1, 0:dimx-2, 1:dimy-1] + \
-		# u[1, 2:dimx,   1:dimy-1] + \
-		# u[1, 1:dimx-1, 0:dimy-2] + \
-		# u[1, 1:dimx-1, 2:dimy] - 4*u[1, 1:dimx-1, 1:dimy-1]) \
-		# + 2 * u[1, 1:dimx-1, 1:dimy-1] - u[2, 1:dimx-1, 1:dimy-1]
+        # project to a surface
+        
+        # clear the previous solution 
+        
+        # plot the new solution 
+        
+        # update variables 
+        
         
     def plotSoln2D(self, vals): 
         
@@ -406,6 +439,8 @@ def main():
     # collect command line input
     parser = argparse.ArgumentParser(description="Runs FiniteDiff.py.")
     parser.add_argument('--onedim', action='store_true', required=False)
+    parser.add_argument('--twodimvec', action='store_true', required=False)
+    parser.add_argument('--twodimstitch', action='store_true', required=False)
     args = parser.parse_args()
     
     # set up and run 1D version if specified
@@ -414,12 +449,34 @@ def main():
         FD = FiniteDiffs([-50,50], [0,10], fig, ax)
         FD.runTest()
     
-    # set up and run 2D version as defualt
-    else: 
+    # set up and run 2D vectorized version
+    elif args.twodimvec:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds = [-50,50])
+        FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds=[-50,50], stitch=False)
         FD.runTest()
+    
+    # setup and run the 2D path stitching version 
+    elif args.twodimstitch:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        FD = FiniteDiffs([-50,50], [0,10], fig, ax, ybounds = [-50,50], stitch=True)
+        FD.runTest()
+    
+    # alert user to run in the terminal
+    else: 
+        print()
+        print("Please run this file in the terminal!")
+        print("Specify which mode you would like to run using one of the following flags:") 
+        print()
+        print("     python FiniteDiff.py --onedim")
+        print("     python FiniteDiff.py --twodimvec")
+        print("     python FiniteDiff.py --twodimstitch")
+        print()
+        print("Note that you can see a higher fps version of the wave that you create by" + 
+              " saving to a gif. Check the function  FiniteDiffs.runTest in the source code" +
+              " to see how to do this!")
+        print()
 
 if __name__ == '__main__':
     main()
