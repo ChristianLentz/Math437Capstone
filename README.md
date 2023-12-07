@@ -21,8 +21,8 @@ we include. First, run **python FiniteFiff.py**. If this does not work, you may 
 
 #### Sources
 
-- Süli, E. A Brief Introduction to the Numerical Analysis of PDEs.
-- S H, L. (2012). Numerical analysis of partial differential equations. John Wiley & Sons.
+- Süli, E. *A Brief Introduction to the Numerical Analysis of PDEs*.
+- S H, L. (2012). *Numerical analysis of partial differential equations*. John Wiley & Sons.
 
 Note that each implementation assumes periodic boundary conditions, and starts with a randomly generated initial condition / function that is peeriodic with the boundries of the computational grid. 
 
