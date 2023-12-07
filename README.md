@@ -13,7 +13,7 @@ we include. First, run **python FiniteFiff.py**. If this does not work, you may 
 
 **--onedimvec :** this flag specifies that we wish to plot 1D solutions to the wave equation using an efficient vectorized version (thanks, NumPy). 
 
-**--onedinloop :** this flag specifies that we wish to plot 1D solutions to the wave equation using a brute forcefunction that explicitly lopps over both temporal and spatial variables. The vectorized version only loops over the temporal variable. 
+**--onedimloop :** this flag specifies that we wish to plot 1D solutions to the wave equation using a brute forcefunction that explicitly lopps over both temporal and spatial variables. The vectorized version only loops over the temporal variable. 
 
 **--twodimvec :** this flag specifies that we wish to plot 2D solutions to the wave equation using the efficient vectrized approach (thanks once again, NumPy)
 
