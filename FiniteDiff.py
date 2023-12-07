@@ -27,7 +27,7 @@ class FiniteDiffs:
     A finite differences PDE solver with an animated frontend. 
     """
     
-    def __init__(self, xbounds, tbounds, fig, ax, ybounds=None, stitch=None):
+    def __init__(self, xbounds, tbounds, fig, ax, ybounds=None, stitch=None, loop=None):
         
         """ 
         Constructor for the finite differences solver. 
@@ -36,13 +36,19 @@ class FiniteDiffs:
         # ======================= constants and variables 
          
         # speed
-        self.c = 30
+        self.c = 100
         
         # determines if run in 1D mode
         if ybounds == None:
             self.is1D = True 
         else: 
             self.is1D = False
+        
+        # detemines which 1D mode to run 
+        if loop: 
+            self.loop = True
+        else: 
+            self.loop = False
         
         # determines which 2D mode to run 
         if stitch: 
@@ -95,7 +101,7 @@ class FiniteDiffs:
         
         # variables to track current and previous solutions curves 
         # we need both of these to compute the difference quotients
-        # we initialize uprev to be the same as ucurr so our initial step is smooth 
+        # initialize uprev to be the same as ucurr so our initial step is smooth 
         self.uprev = IC
         self.ucurr = IC
        
@@ -117,29 +123,58 @@ class FiniteDiffs:
         
         # plot 1D solutions 
         if self.is1D:
-            self.plotSoln1D(self.ucurr)
-            wave1D = self.plotSoln1D(self.ucurr)
-            animation = ani.FuncAnimation(fig = self.fig, 
-                                        func = self.oneStep1DVec,
+            
+            if self.loop: 
+                print()
+                print("Now plotting 1D solutions with brute force looping function!")
+                print()
+                self.plotSoln1D(self.ucurr)
+                wave1D = self.plotSoln1D(self.ucurr)
+                animation = ani.FuncAnimation(fig = self.fig, 
+                                        func = self.oneStep1DLoops,
                                         fargs = (wave1D, ),  
                                         frames = 1000, 
-                                        interval = 5) 
+                                        interval = 5)
+                
+                # uncomment this to save a gif to your local! 
+                # animation.save('1DWaveLoop.gif', writer=pillow)
+                
+            else: 
+                print()
+                print("Now plotting 1D solutions with vectorized function!")
+                print()
+                self.plotSoln1D(self.ucurr)
+                wave1D = self.plotSoln1D(self.ucurr)
+                animation = ani.FuncAnimation(fig = self.fig, 
+                                            func = self.oneStep1DVec,
+                                            fargs = (wave1D, ),  
+                                            frames = 1000, 
+                                            interval = 5) 
+                
+                # uncomment this to save a gif to your local! 
+                # animation.save('1DWaveVec.gif', writer=pillow)
             
-            # uncomment this to save a gif to your local! 
-            # animation.save('1DWave.gif', writer=pillow)
-            
-        # plot 2D solutions 
+        # plot 2D solutions
         else:
             
             if self.stitch:
+                print()
+                print("Now plotting 2D solutions with vectorized function!")
+                print()
+                wave2D = self.plotSoln2D(self.projectToSurface(self.ucurr[0], self.ucurr[1]))
+                animation = ani.FuncAnimation(fig = self.fig, 
+                                            func = self.oneStep2DStitch,
+                                            fargs = (wave2D, ),  
+                                            frames = 200, 
+                                            interval = 5)
                 
-                print("all that worked!")
-                print(self.uprev[0])
-                print(self.uprev[1])
                 # uncomment this to save a gif to your local! 
-                # animation.save('2DWaveVec.gif', writer=pillow)
+                # animation.save('2DWaveStitch.gif', writer=pillow)
                 
             else: 
+                print()
+                print("Now plotting 2D solutions with stitching function!")
+                print()
                 wave2D = self.plotSoln2D(self.ucurr)
                 animation = ani.FuncAnimation(fig = self.fig, 
                                             func = self.oneStep2DShifting,
@@ -352,34 +387,29 @@ class FiniteDiffs:
         y + dy by shifting the 2D array self.ucurr either north, south, 
         east or west.
         
-        This is not working entirely correctly, and is currently depricated.  
+        This is not working entirely correctly, but is close. 
         """
 
         # get un
         un = self.ucurr * 0
         un[0:-1,:] = self.ucurr[1:,:]
         un[-1,:] = self.ucurr[0,:]
-        
         # get us 
         us = self.ucurr * 0
         us[1:,:] = self.ucurr[0:-1,:]
         us[0,:] = self.ucurr[-1,:]
-        
         # get ue 
         ue = self.ucurr * 0
         ue[:,0:-1] = self.ucurr[:,1:]
         ue[:,-1] = self.ucurr[:,0]
-        
         # get uw
         uw = self.ucurr * 0
         uw[:,0] = self.ucurr[:,-1]
         uw[:,1:] = self.ucurr[0,0:-1]
-        
         # compute difference quotient
         unew = 2*self.ucurr - self.uprev 
         unew += self.XC*(uw + ue - 2*self.ucurr) 
         unew += self.YC*(un + us - 2*self.ucurr)
-        
         # update variables and animate plot
         plt.cla()
         self.plotSoln2D(unew)
@@ -390,30 +420,65 @@ class FiniteDiffs:
     def oneStep2DStitch(self, frame, wave):
         
         """
-        Each step of the PDE solver proceeds by applying oneStep1D vec to two
-        paths and then stitching them together using projectToSurface. This 
-        is the solution that we plot at each step. 
+        Each step of the PDE solver proceeds by applying a vectorized version 
+        of 1D finite differences to two paths, and then stitching these paths 
+        together to form a surface using project to surface. 
+        
+        This stitchig together process is linear in the number of points in the 
+        computational grid. 
         
         There is no new math or logic here, just cleverly resuing work that 
         we already did! 
+        
+        The components needed for the computation are defined as:
+        
+        - xl = u(x - dx, t) for all x in self.xvals
+        - xr = u(x + dx, y) for all x in self.xvals 
+        - yl = u(x, y - dy t) for all x in self.yvals
+        - yr = u(x, y + dy, t) for all x in self.yvals 
         
         Note that each time we run this, both self.ucurr and self.uprev are 
         tuples of paths which contain all of the infomration needed to apply 
         the PDE! 
         """
         
-        # apply oneStep to the x path 
+        # get our current and prev soln soln
+        curr_xpath = self.ucurr[0]
+        prev_xpath = self.uprev[0]
+        curr_ypath = self.ucurr[1]
+        prev_ypath = self.uprev[1]
+        # apply oneStep helper to curr paths
+        xl, xr = self.oneStep2DStitchHelper(curr_xpath)
+        yl, yr = self.oneStep2DStitchHelper(curr_ypath)
+        # apply the PDE to each shifted path
+        unewx = 2*curr_xpath - prev_xpath + self.XC*(xr + xl - 2*curr_xpath)
+        unewy = 2*curr_ypath - prev_ypath + self.YC*(yr + yl - 2*curr_ypath)
+        # project to a surface, plot update variables
+        unew2D = self.projectToSurface(unewx, unewy)
+        plt.cla()
+        self.plotSoln2D(unew2D)
+        self.tc+=1
+        self.uprev = self.ucurr
+        self.ucurr = unewx, unewy
         
-        # apply oneStep to the y path 
+    def oneStep2DStitchHelper(self, path): 
         
-        # project to a surface
+        """
+        Call vectorized 1D finite differencces on a single path. We only return the arrays that
+        have been shifted over the boundry conditions, and then apply the wave PDE on the 
+        object that we have returned.  
+        """
+            
+        # get the "left-shifted" path  
+        ul = path * 0 
+        ul[0:-1] = path[1:]
+        ul[-1] = path[0]
+        # get the "right-shifted" path
+        ur = path * 0
+        ur[0] = path[-1]
+        ur[1:] = path[0:-1]
         
-        # clear the previous solution 
-        
-        # plot the new solution 
-        
-        # update variables 
-        
+        return ul, ur
         
     def plotSoln2D(self, vals): 
         
@@ -438,15 +503,22 @@ def main():
     
     # collect command line input
     parser = argparse.ArgumentParser(description="Runs FiniteDiff.py.")
-    parser.add_argument('--onedim', action='store_true', required=False)
+    parser.add_argument('--onedimvec', action='store_true', required=False)
+    parser.add_argument('--onedimloop', action='store_true', required=False)
     parser.add_argument('--twodimvec', action='store_true', required=False)
     parser.add_argument('--twodimstitch', action='store_true', required=False)
     args = parser.parse_args()
     
-    # set up and run 1D version if specified
-    if args.onedim: 
+    # set up and run 1D vectoried version if specified
+    if args.onedimvec: 
         fig, ax = plt.subplots()
-        FD = FiniteDiffs([-50,50], [0,10], fig, ax)
+        FD = FiniteDiffs([-50,50], [0,10], fig, ax, loop=False)
+        FD.runTest()
+    
+    # set up and run 1D loops version if specified
+    elif args.onedimloop: 
+        fig, ax = plt.subplots()
+        FD = FiniteDiffs([-50,50], [0,10], fig, ax, loop=True)
         FD.runTest()
     
     # set up and run 2D vectorized version
@@ -469,7 +541,8 @@ def main():
         print("Please run this file in the terminal!")
         print("Specify which mode you would like to run using one of the following flags:") 
         print()
-        print("     python FiniteDiff.py --onedim")
+        print("     python FiniteDiff.py --onedimvec")
+        print("     python FiniteDiff.py --onedimloop")
         print("     python FiniteDiff.py --twodimvec")
         print("     python FiniteDiff.py --twodimstitch")
         print()
