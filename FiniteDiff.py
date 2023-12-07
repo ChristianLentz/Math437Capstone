@@ -36,7 +36,7 @@ class FiniteDiffs:
         # ======================= constants and variables 
          
         # speed
-        self.c = 100
+        self.c = 200
         
         # determines if run in 1D mode
         if ybounds == None:
@@ -159,21 +159,21 @@ class FiniteDiffs:
             
             if self.stitch:
                 print()
-                print("Now plotting 2D solutions with vectorized function!")
+                print("Now plotting 2D solutions with stitching function!")
                 print()
                 wave2D = self.plotSoln2D(self.projectToSurface(self.ucurr[0], self.ucurr[1]))
                 animation = ani.FuncAnimation(fig = self.fig, 
                                             func = self.oneStep2DStitch,
                                             fargs = (wave2D, ),  
-                                            frames = 200, 
+                                            frames = 500, 
                                             interval = 5)
                 
                 # uncomment this to save a gif to your local! 
-                # animation.save('2DWaveStitch.gif', writer=pillow)
+                animation.save('2DWaveStitch.gif', writer=pillow)
                 
             else: 
                 print()
-                print("Now plotting 2D solutions with stitching function!")
+                print("Now plotting 2D solutions with vectorized function!")
                 print()
                 wave2D = self.plotSoln2D(self.ucurr)
                 animation = ani.FuncAnimation(fig = self.fig, 
@@ -547,7 +547,7 @@ def main():
         print("     python FiniteDiff.py --twodimstitch")
         print()
         print("Note that you can see a higher fps version of the wave that you create by" + 
-              " saving to a gif. Check the function  FiniteDiffs.runTest in the source code" +
+              " saving to a gif. Check the function FiniteDiffs.runTest in the source code" +
               " to see how to do this!")
         print()
 
