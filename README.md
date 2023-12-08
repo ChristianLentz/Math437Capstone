@@ -19,11 +19,6 @@ we include. First, run **python FiniteFiff.py**. If this does not work, you may 
 
 **--twodimstitch :** this flag specifies that we wish to plot 2D solutions to the wave equation by storing two paths, and at each discrete time step of our computation, apply the PDE to these two paths and "stitch" then togethr to form a surface. This is more accurate than our implementation of the 2D vectorized version, and does less work in temrs of applying the PDE. However, we must loop over the entire computational grid in order to stitch together our surface. 
 
-#### Sources
-
-- Süli, E. *A Brief Introduction to the Numerical Analysis of PDEs*.
-- S H, L. (2012). *Numerical analysis of partial differential equations*. John Wiley & Sons.
-
 Note that each implementation assumes periodic boundary conditions, and starts with a randomly generated initial condition / function that is peeriodic with the boundries of the computational grid. 
 
 #### Bugs 
