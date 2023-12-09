@@ -1,12 +1,6 @@
 """ 
 This file contains code to approximate solutions to the wave equation 
-in two dimensions using finite differences. 
-
-I credit the followig source with helping me to finsih the 2D code, as 
-I was running into problems with the "shifting" method and then found 
-this resource: 
-
-https://beltoforion.de/en/recreational_mathematics/2d-wave-equation.php
+in one and two dimensions using finite differences. 
 
 Author: Christian Lentz
 """
@@ -120,13 +114,13 @@ class FiniteDiffs:
         """ 
         
         pillow = PillowWriter(fps=40)
-        
+    
         # plot 1D solutions 
         if self.is1D:
             
             if self.loop: 
                 print()
-                print("Now plotting 1D solutions with brute force looping function!")
+                print("Now plotting 1D solutions with the looping function!")
                 print()
                 self.plotSoln1D(self.ucurr)
                 wave1D = self.plotSoln1D(self.ucurr)
@@ -169,7 +163,7 @@ class FiniteDiffs:
                                             interval = 5)
                 
                 # uncomment this to save a gif to your local! 
-                # animation.save('2DWaveStitch.gif', writer=pillow)
+                animation.save('2DWaveStitch.gif', writer=pillow)
                 
             else: 
                 print()
@@ -269,7 +263,7 @@ class FiniteDiffs:
             
         return np.array(surf)
         
-    def oneStep1DLoops(self): 
+    def oneStep1DLoops(self, frame, wave): 
         
         """ 
         Run one step of the PDE solver by computing a solution for a single 
@@ -288,18 +282,14 @@ class FiniteDiffs:
         """ 
 
         unew = 0 * self.ucurr
-        
         for j in range(unew.size):
-            
             # get the previous time step: u(x, T - dt)
-            tp = self.uprev[j]
-                
+            tp = self.uprev[j]   
             # left boundary -- periodic boundary condition
             if j == 0:
                 ul = self.ucurr[-1]
                 uc = self.ucurr[j]
                 ur = self.ucurr[j+1]
-                
             # right boundary -- periodic boundary condition
             elif j == unew.size-1:
                 ul = self.ucurr[j-1]
@@ -310,12 +300,12 @@ class FiniteDiffs:
                 ul = self.ucurr[j-1]
                 uc = self.ucurr[j]
                 ur = self.ucurr[j+1]
-                
             # compute difference quotient
             unew[j] = 2*uc - tp 
             unew[j] += self.XC*(ur + ul - 2*uc) 
-        
         # update solutions and time step
+        plt.cla()
+        self.plotSoln1D(unew)
         self.uprev = self.ucurr
         self.ucurr = unew
         self.tc+=1
