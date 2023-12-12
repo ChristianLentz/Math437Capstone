@@ -163,7 +163,7 @@ class FiniteDiffs:
                                             interval = 5)
                 
                 # uncomment this to save a gif to your local! 
-                animation.save('2DWaveStitch.gif', writer=pillow)
+                # animation.save('2DWaveStitch.gif', writer=pillow)
                 
             else: 
                 print()
