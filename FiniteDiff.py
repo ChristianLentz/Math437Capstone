@@ -122,7 +122,7 @@ class FiniteDiffs:
         a randomly generated initial condition. 
         """ 
         
-        pillow = PillowWriter(fps=40)
+        pillow = PillowWriter(fps=50)
     
         # plot 1D solutions 
         if self.is1D:
@@ -181,7 +181,7 @@ class FiniteDiffs:
                 animation = ani.FuncAnimation(fig = self.fig, 
                                             func = self.oneStep2DShifting,
                                             fargs = (wave2D, ),  
-                                            frames = 200, 
+                                            frames = 500, 
                                             interval = 5)
                 
                 # uncomment this to save a gif to your local! 
@@ -291,8 +291,6 @@ class FiniteDiffs:
         time step, we get a 2D array for x - dx, x + dx, y - dy, and 
         y + dy by shifting the 2D array self.ucurr either north, south, 
         east or west.
-        
-        This is not working entirely correctly, but is close. 
         """
 
         # get un
@@ -310,7 +308,7 @@ class FiniteDiffs:
         # get uw
         uw = self.ucurr * 0
         uw[:,0] = self.ucurr[:,-1]
-        uw[:,1:] = self.ucurr[0,0:-1]
+        uw[:,1:] = self.ucurr[:,0:-1]              # this is where the error was: [0,0:-1] !!
         # compute difference quotient
         unew = 2*self.ucurr - self.uprev 
         unew += self.XC*(uw + ue - 2*self.ucurr) 

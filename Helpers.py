@@ -47,7 +47,7 @@ class helper:
         """
         
         ic = np.zeros(vals.shape)
-        for hill in range(rand.randint(8,10)):
+        for hill in range(rand.randint(15,20)):
             if hill % 2 == 0: 
                 ic = ic + self.getRandSinWave(vals, maximum - minimum)
             else: 
