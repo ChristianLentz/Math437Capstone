@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 from matplotlib.animation import PillowWriter
 from mpl_toolkits.mplot3d import Axes3D 
+from Helpers import helper
 
 class FiniteDiffs: 
     
@@ -28,6 +29,9 @@ class FiniteDiffs:
         """
         
         # ======================= constants and variables 
+        
+        # helper methods
+        self.helper = helper()
          
         # speed
         self.c = 200
@@ -78,18 +82,23 @@ class FiniteDiffs:
         
         # ======================= initial conditions 
         
-        if self.is1D: 
-            IC = self.get_IC(self.is1D)
+        if self.is1D:
+            IC = self.helper.get_IC(self.is1D, 
+                self.xvals, self.xmin, self.xmax, 
+                None, None, None) 
         else:
             # in the 2D case, need to determine which mode we use!
             if self.stitch:
-                # this is a tuple of two paths we can stitch together
-                # in stitch mode we stitch two 1D solutions together at each step!  
-                IC = self.get_IC(self.is1D)
+                # IC is a tuple of two paths  
+                IC = self.helper.get_IC(self.is1D, 
+                self.xvals, self.xmin, self.xmax, 
+                self.yvals, self.ymin, self.ymax) 
             else: 
-                # this is a surface projected from two paths
-                ICx, ICy = self.get_IC(self.is1D)
-                IC = self.projectToSurface(ICx, ICy)
+                # IC is a surface
+                ICx, ICy = self.helper.get_IC(self.is1D, 
+                self.xvals, self.xmin, self.xmax, 
+                self.yvals, self.ymin, self.ymax)
+                IC = self.helper.projectToSurface(ICx, ICy)
         
         # =======================
         
@@ -122,8 +131,7 @@ class FiniteDiffs:
                 print()
                 print("Now plotting 1D solutions with the looping function!")
                 print()
-                self.plotSoln1D(self.ucurr)
-                wave1D = self.plotSoln1D(self.ucurr)
+                wave1D = self.helper.plotSoln1D(self.xvals, self.ucurr, self.ax)
                 animation = ani.FuncAnimation(fig = self.fig, 
                                         func = self.oneStep1DLoops,
                                         fargs = (wave1D, ),  
@@ -137,8 +145,7 @@ class FiniteDiffs:
                 print()
                 print("Now plotting 1D solutions with vectorized function!")
                 print()
-                self.plotSoln1D(self.ucurr)
-                wave1D = self.plotSoln1D(self.ucurr)
+                wave1D = self.helper.plotSoln1D(self.xvals, self.ucurr, self.ax)
                 animation = ani.FuncAnimation(fig = self.fig, 
                                             func = self.oneStep1DVec,
                                             fargs = (wave1D, ),  
@@ -155,7 +162,8 @@ class FiniteDiffs:
                 print()
                 print("Now plotting 2D solutions with stitching function!")
                 print()
-                wave2D = self.plotSoln2D(self.projectToSurface(self.ucurr[0], self.ucurr[1]))
+                initWave = self.helper.projectToSurface(self.ucurr[0], self.ucurr[1])
+                wave2D = self.helper.plotSoln2D(self.xvals, self.yvals, initWave, self.ax)
                 animation = ani.FuncAnimation(fig = self.fig, 
                                             func = self.oneStep2DStitch,
                                             fargs = (wave2D, ),  
@@ -169,7 +177,7 @@ class FiniteDiffs:
                 print()
                 print("Now plotting 2D solutions with vectorized function!")
                 print()
-                wave2D = self.plotSoln2D(self.ucurr)
+                wave2D = self.helper.plotSoln2D(self.xvals, self.yvals, self.ucurr, self.ax)
                 animation = ani.FuncAnimation(fig = self.fig, 
                                             func = self.oneStep2DShifting,
                                             fargs = (wave2D, ),  
@@ -180,88 +188,6 @@ class FiniteDiffs:
                 # animation.save('2DWaveVec.gif', writer=pillow)
         
         plt.show()
-                
-    def get_dt(self):  
-               
-        """
-        Use the CLT condition to find a value for dt given dx (and dy). 
-        """
-        
-        # never implemented :(
-    
-    def get_IC(self, is1D): 
-        
-        """
-        Randomly generate an initial condition. 
-        We use random linear combintions of normal distributions. 
-        """
-        
-        # generate random x (and y) path(s) as initial conditions
-        if is1D: 
-            return self.getRandHillyPath(self.xvals, self.xmax, self.xmin)
-        else: 
-            ICx = self.getRandHillyPath(self.xvals, self.xmax, self.xmin)
-            ICy = self.getRandHillyPath(self.yvals, self.ymax, self.ymin)
-            return ICx, ICy
-    
-    def getRandHillyPath(self, vals, maximum, minimum):
-        
-        """ 
-        Generate a random hilly path. We use this to generate an initial 
-        condition for y and x, and then combine these to get a random 
-        surface as our initial wave. 
-        """
-        
-        ic = np.zeros(vals.shape)
-        for hill in range(rand.randint(8,10)):
-            if hill % 2 == 0: 
-                ic = ic + self.getRandSinWave(vals, maximum - minimum)
-            else: 
-                ic = ic + self.getRandCosWave(vals, maximum - minimum)
-            
-        return ic
-    
-    def getRandSinWave(self, vals, w):
-        
-        """
-        Generate a random sine wave whose period alings with the boundaries.  
-        """
-        
-        a = self.getRandScalar()
-        return a*np.sin((2*np.pi/w)*vals)
-    
-    def getRandCosWave(self, vals, w): 
-        
-        """
-        Get a random cosine wave whose period aligns with the boundaries. 
-        """
-        
-        b = self.getRandScalar()
-        return b*np.cos((2*np.pi/w)*vals)
-    
-    def getRandScalar(self):
-        
-        """
-        Get a random real number to scale the height of the random periodic function.  
-        """
-           
-        return rand.random()*rand.randint(-5, 5)
-    
-    def projectToSurface(self, xvals, yvals): 
-        
-        """
-        From two sequences which represent points along the x and y axis, project 
-        these into a surface. 
-        """
-        
-        surf = []
-        for xval in xvals:
-            curr_x_arr = []
-            for yval in yvals: 
-                curr_x_arr.append(xval+yval)
-            surf.append(curr_x_arr)
-            
-        return np.array(surf)
         
     def oneStep1DLoops(self, frame, wave): 
         
@@ -305,7 +231,7 @@ class FiniteDiffs:
             unew[j] += self.XC*(ur + ul - 2*uc) 
         # update solutions and time step
         plt.cla()
-        self.plotSoln1D(unew)
+        self.helper.plotSoln1D(self.xvals, unew, self.ax)
         self.uprev = self.ucurr
         self.ucurr = unew
         self.tc+=1
@@ -343,21 +269,10 @@ class FiniteDiffs:
         unew += self.XC*(ur + ul - 2*self.ucurr)
         # update variables and animate solns
         plt.cla()
-        self.plotSoln1D(unew)
+        self.helper.plotSoln1D(self.xvals, unew, self.ax)
         self.tc+=1
         self.uprev = self.ucurr + 0
         self.ucurr = unew + 0
-        
-    def plotSoln1D(self, vals): 
-        
-        """
-        Plot a 1D solution to the wave equation. 
-        """
-        
-        self.ax.plot(self.xvals, vals, '-')
-        self.ax.set_ylim((-10, 10))
-        self.ax.set_xlabel("x axis")
-        self.ax.set_ylabel("y axis")
         
     def oneStep2DShifting(self, frame, wave): 
         
@@ -402,7 +317,7 @@ class FiniteDiffs:
         unew += self.YC*(un + us - 2*self.ucurr)
         # update variables and animate plot
         plt.cla()
-        self.plotSoln2D(unew)
+        self.helper.plotSoln2D(self.xvals, self.yvals, unew, self.ax)
         self.tc+=1
         self.uprev = self.ucurr
         self.ucurr = unew
@@ -444,9 +359,9 @@ class FiniteDiffs:
         unewx = 2*curr_xpath - prev_xpath + self.XC*(xr + xl - 2*curr_xpath)
         unewy = 2*curr_ypath - prev_ypath + self.YC*(yr + yl - 2*curr_ypath)
         # project to a surface, plot update variables
-        unew2D = self.projectToSurface(unewx, unewy)
+        unew2D = self.helper.projectToSurface(unewx, unewy)
         plt.cla()
-        self.plotSoln2D(unew2D)
+        self.helper.plotSoln2D(self.xvals, self.yvals, unew2D, self.ax)
         self.tc+=1
         self.uprev = self.ucurr
         self.ucurr = unewx, unewy
@@ -469,19 +384,6 @@ class FiniteDiffs:
         ur[1:] = path[0:-1]
         
         return ul, ur
-        
-    def plotSoln2D(self, vals): 
-        
-        """
-        Plot a 2D solution to the wave equation. 
-        """
-        
-        X, Y = np.meshgrid(self.xvals, self.yvals) 
-        self.ax.plot_surface(X, Y, vals)
-        self.ax.set_zlim(-10,10)
-        self.ax.set_xlabel("x axis")
-        self.ax.set_ylabel("y axis")
-        self.ax.set_zlabel("z axis")
 
 # ==============================================================
 
