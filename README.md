@@ -19,7 +19,3 @@ First, open the terminal of your choice and navigate to the root directory of th
 **--twodimstitch :** this flag specifies that we wish to plot 2D solutions to the wave equation by storing two paths, and at each discrete time step of our computation, apply the PDE to these two paths and "stitch" then togethr to form a surface. This is more accurate than our implementation of the 2D vectorized version, and does less work in temrs of applying the PDE. However, we must loop over the entire computational grid in order to stitch together our surface. 
 
 Finally, to see the Fourier Spectral method for the wave equation, run **python fourier.py** in the terminal without any flags. Note that each implementation assumes periodic boundary conditions, and starts with a randomly generated initial condition / function that is periodic with the boundries of the computational grid. 
-
-#### Bugs 
-
-There is current a small bug with the two-dimensional vectorized finite differeneces, which causes solutions to diverge after some time, starting with the boundaries. 
