@@ -1,80 +1,79 @@
-# """ 
-# This file contains code to approximate solutions to the wave equation 
-# in one dimension using the Fouier Spectral method via the fast Fourier 
-# Transform. 
+""" 
+This file contains code to approximate solutions to the wave equation 
+in one dimension using the Fouier Spectral method via the fast Fourier 
+Transform. 
 
-# Author: Christian Lentz
-# """
-
-# class fourier: 
-    
-#     def __init__(self): 
-        
-#         """ 
-#         A PDE solver for the wave equation using Fourier spectral methods. 
-#         """
-        
-#         self.xmin = 0
-#         self.xmax = 2*pi
-#         xN = 2 * (self.xmax - self.xmin)
-#         self.deltaX = (self.xmax - self.xmin) / 8 
-#         self.xvals = np.linspace(self.xmin, self.xmax, xN, endpoint = False) 
-#         tN = 1000 * (self.tmax - self.tmin) 
-#         self.deltaT = (self.tmax - self.tmin) / tN
-#         self.XC = ((self.c**2)*(self.deltaT**2))/(self.deltaX**2)
-        
-#         print("I worked")
-        
-    
-#     def transform(self, vals): 
-        
-#         """ 
-#         Perform a Fourier transform on some vecotr using the Fourier matrix. 
-#         """
-        
-#     def main():
-        
-#         fourier = fourier()
-
-# if __name__ == "__main__": 
-#     main()
+Author: Christian Lentz
+"""
 
 import numpy as np
-import math as math 
-import random as rand
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft, fftfreq
 
-# set up evenly spaced data
-xmin = 0
-xmax = 2*np.pi
-xN = 9
-deltaX = (xmax - xmin) / 9 
-xvals = np.linspace(xmin, xmax, xN, endpoint = False)
-yvals = np.random.rand(xN)
-# get a plot ready
-fig, ax = plt.subplots() 
-ax.plot(xvals, yvals, 'o', color='red')
-# apply fft 
-cvals = fft(yvals) / yvals.size
-print(cvals)
-# apply inverse fft to get data to plot 
-# real part should be small!
-X_vals = np.linspace(0, 2*np.pi, 1000) 
-Y_vals = 0*X_vals+0j
-jvals = fftfreq(cvals.size, 1/cvals.size)
-print(jvals)
-# jvals = np.arange(8)
-for k in range(X_vals.size):
-    Y_vals[k] = (np.exp(1j*jvals*X_vals[k])*cvals).sum()
-ax.plot(X_vals, Y_vals.real, '-', color='blue')
-ax.plot(X_vals, Y_vals.imag, '-', color='green')
-ax.set_ylim(-1,2)
-plt.show()
-
-# tN = 1000 * (tmax - tmin) 
-# deltaT = (tmax - tmin) / tN
-# XC = ((c**2)*(deltaT**2))/(deltaX**2)
-
-
+class fourier: 
+    
+    def __init__(self, xbounds, tbounds, fig, ax): 
         
+        """ 
+        A PDE solver for the wave equation using Fourier spectral methods. 
+        Checkout foureirExample.py to see a simpler version of this setup! 
+        """
+        
+        # set up evenly spaced data - use the get IC to do this better! 
+        self.xmin = xbounds[0]
+        self.xmax = xbounds[1]
+        xN = 129
+        deltaX = (self.xmax - self.xmin) / xN 
+        xvals = np.linspace(self.xmin, self.xmax, xN, endpoint = False)
+        yvals = np.random.rand(xN)
+
+        # get a plot ready
+        self.fig, self.ax = fig, ax
+        self.ax.plot(xvals, yvals, 'o', color='red')
+
+        # apply fft - with scipy
+        cvals = fft(yvals) / yvals.size
+
+        # apply inverse fft over a finer range of xvals
+        X_vals = np.linspace(self.xmin, self.xmax, 1000) 
+        Y_vals = 0*X_vals+0j
+        jvals = fftfreq(cvals.size, 1/cvals.size)
+        for k in range(X_vals.size):
+            Y_vals[k] = (np.exp(1j*jvals*X_vals[k])*cvals).sum()
+
+        # plot the result
+        self.ax.plot(X_vals, Y_vals.real, '-', color='blue')
+        self.ax.plot(X_vals, Y_vals.imag, '-', color='green')
+        self.ax.set_ylim(-1,2)
+        self.ax.set_title("Trig Interpolation with Fourier Transform")
+        plt.show()
+    
+    def run(self):
+        
+        """
+        Run the PDE solver and allow to plot/save! 
+        """
+    
+    def get_IC(self):
+        
+        """
+        Generate an initial condition. 
+        """
+    
+    def transform(self, vals): 
+        
+        """ 
+        Perform a Fourier transform with scipy's fft(), then use a hardcoded
+        version of the inverse fft to interpolate.  
+        """
+        
+# ============================================================
+
+def main():
+    
+    fig, ax = plt.subplots()
+    b = 10*np.pi
+    F = fourier([-b,b], [0,10], fig, ax)
+
+if __name__ == "__main__": 
+    main()      
