@@ -19,33 +19,26 @@ class fourier:
         Checkout foureirExample.py to see a simpler version of this setup! 
         """
         
-        # set up evenly spaced data - use the get IC to do this better! 
+        # set up evenly spaced, periodic data
         self.xmin = xbounds[0]
         self.xmax = xbounds[1]
-        xN = 129
+        xN = 9
         deltaX = (self.xmax - self.xmin) / xN 
         xvals = np.linspace(self.xmin, self.xmax, xN, endpoint = False)
-        yvals = np.random.rand(xN)
+        yvals = self.get_IC(xvals)
 
         # get a plot ready
         self.fig, self.ax = fig, ax
-        self.ax.plot(xvals, yvals, 'o', color='red')
 
-        # apply fft - with scipy
-        cvals = fft(yvals) / yvals.size
-
-        # apply inverse fft over a finer range of xvals
-        X_vals = np.linspace(self.xmin, self.xmax, 1000) 
-        Y_vals = 0*X_vals+0j
-        jvals = fftfreq(cvals.size, 1/cvals.size)
-        for k in range(X_vals.size):
-            Y_vals[k] = (np.exp(1j*jvals*X_vals[k])*cvals).sum()
+        # interpolate initial solution
+        X_vals, Y_vals, max_val = self.transform(yvals)
 
         # plot the result
         self.ax.plot(X_vals, Y_vals.real, '-', color='blue')
-        self.ax.plot(X_vals, Y_vals.imag, '-', color='green')
-        self.ax.set_ylim(-1,2)
-        self.ax.set_title("Trig Interpolation with Fourier Transform")
+        self.ax.set_ylim(0, max_val+1)
+        
+        # apply the wave equation 
+        
         plt.show()
     
     def run(self):
@@ -54,18 +47,39 @@ class fourier:
         Run the PDE solver and allow to plot/save! 
         """
     
-    def get_IC(self):
+    def get_IC(self, vals):
         
         """
         Generate an initial condition. 
         """
+        
+        rand_num = np.random.rand(1)
+        if rand_num > 0.5:
+            return np.exp(np.sin(vals))
+        else:
+            return np.exp(np.cos(vals))
     
-    def transform(self, vals): 
+    def transform(self, yvals): 
         
         """ 
         Perform a Fourier transform with scipy's fft(), then use a hardcoded
         version of the inverse fft to interpolate.  
         """
+        
+        # apply fft - with scipy
+        cvals = fft(yvals) / yvals.size
+        # apply inverse fft over a finer discretization of of xvals
+        X_vals = np.linspace(self.xmin, self.xmax, 1000) 
+        Y_vals = 0*X_vals+0j
+        jvals = fftfreq(cvals.size, 1/cvals.size)
+        max_val = 0
+        for k in range(X_vals.size):
+            new_val = (np.exp(1j*jvals*X_vals[k])*cvals).sum()
+            if new_val.real > max_val: 
+                max_val = new_val.real
+            Y_vals[k] = new_val
+        
+        return X_vals, Y_vals, max_val
         
 # ============================================================
 
