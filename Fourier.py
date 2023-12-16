@@ -3,6 +3,8 @@ This file contains code to approximate solutions to the wave equation
 in one dimension using the Fouier Spectral method via the fast Fourier 
 Transform. 
 
+NOTE: this implementation is not complete! 
+
 Author: Christian Lentz
 """
 
@@ -29,15 +31,14 @@ class fourier:
 
         # get a plot ready
         self.fig, self.ax = fig, ax
+        ax.plot(xvals, yvals, 'o', color='red')
 
         # interpolate initial solution
         X_vals, Y_vals, max_val = self.transform(yvals)
 
         # plot the result
         self.ax.plot(X_vals, Y_vals.real, '-', color='blue')
-        self.ax.set_ylim(0, max_val+1)
-        
-        # apply the wave equation 
+        self.ax.set_ylim(0, max_val+1) 
         
         plt.show()
     
@@ -63,7 +64,7 @@ class fourier:
         
         """ 
         Perform a Fourier transform with scipy's fft(), then use a hardcoded
-        version of the inverse fft to interpolate.  
+        version of the inverse DFT to interpolate.  
         """
         
         # apply fft - with scipy
