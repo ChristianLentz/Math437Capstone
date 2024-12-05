@@ -12,10 +12,10 @@ First, open the terminal of your choice and navigate to the root directory of th
 
 **--onedimvec :** this flag specifies that we wish to plot 1D solutions to the wave equation using an efficient vectorized version (thanks, NumPy). 
 
-**--onedimloop :** this flag specifies that we wish to plot 1D solutions to the wave equation using a brute forcefunction that explicitly lopps over both temporal and spatial variables. The vectorized version only loops over the temporal variable. 
+**--onedimloop :** this flag specifies that we wish to plot 1D solutions to the wave equation using a brute force function that explicitly lopps over both temporal and spatial variables. The vectorized version only loops over the temporal variable. 
 
-**--twodimvec :** this flag specifies that we wish to plot 2D solutions to the wave equation using the efficient vectrized approach (thanks once again, NumPy)
+**--twodimvec :** this flag specifies that we wish to plot 2D solutions to the wave equation using the efficient vectrized approach (thanks again, NumPy). 
 
-**--twodimstitch :** this flag specifies that we wish to plot 2D solutions to the wave equation by storing two paths, and at each discrete time step of our computation, apply the PDE to these two paths and "stitch" then togethr to form a surface. This is more accurate than our implementation of the 2D vectorized version, and does less work in temrs of applying the PDE. However, we must loop over the entire computational grid in order to stitch together our surface. 
+**--twodimstitch :** this flag specifies that we wish to plot 2D solutions to the wave equation by storing two paths, and at each discrete time step of our computation, apply the PDE to these two paths and "stitch" them together to form a surface. We must loop over the entire computational grid in order to stitch together the surface. 
 
 Finally, to see the Fourier Spectral method for the wave equation, run **python fourier.py** in the terminal without any flags. Note that each implementation assumes periodic boundary conditions, and starts with a randomly generated initial condition / function that is periodic with the boundries of the computational grid. 
